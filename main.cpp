@@ -25,8 +25,26 @@ struct point
 	point() {
 	    x = 0; y = 0; z = 0;
 	}
-}cam_pos,red_dots[100];
+}cam_pos;
 
+struct gun_point {
+    double one_Z,two_Y,three_Y,four_X;
+
+    gun_point(double one,double two, double three,double four) {
+        one_Z = one;
+        two_Y = two;
+        three_Y = three;
+        four_X = four;
+    }
+
+    gun_point() {
+        one_Z = 0;
+        two_Y = 0;
+        three_Y = 0;
+        four_X = 0;
+    }
+
+}gun_points[100];
 
 struct vect
 {
@@ -240,16 +258,12 @@ void drawSphere(double radius,int slices,int stacks)
 		for(j=0;j<slices;j++)
 		{
 			glBegin(GL_QUADS);{
-			    //upper hemisphere
+			    //hemisphere
 				glVertex3f(points[i][j].x,points[i][j].y,points[i][j].z);
 				glVertex3f(points[i][j+1].x,points[i][j+1].y,points[i][j+1].z);
 				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,points[i+1][j+1].z);
 				glVertex3f(points[i+1][j].x,points[i+1][j].y,points[i+1][j].z);
-                //lower hemisphere
-               // glVertex3f(points[i][j].x,points[i][j].y,-points[i][j].z);
-				//glVertex3f(points[i][j+1].x,points[i][j+1].y,-points[i][j+1].z);
-				//glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,-points[i+1][j+1].z);
-				//glVertex3f(points[i+1][j].x,points[i+1][j].y,-points[i+1][j].z);
+
 			}glEnd();
 		}
 	}
@@ -257,8 +271,7 @@ void drawSphere(double radius,int slices,int stacks)
 
 void draw_Cylinder(double radius,point center,double length) {
     struct point points[100];
-	int slices = 35
-	;
+	int slices = 35;
 
 
 
@@ -376,7 +389,14 @@ void drawSS()
 
 void print_console() {
     printf("Camera position: (%.2lf,%.2lf,%.2lf)\n",cam_pos.x,cam_pos.y,cam_pos.z);
-    printf("Looking at: (%.2lf,%.2lf,%.2lf)",cam_pos.x+look.x,cam_pos.y+look.y,cam_pos.z+look.z);
+    printf("Looking at: (%.2lf,%.2lf,%.2lf)\n",cam_pos.x+look.x,cam_pos.y+look.y,cam_pos.z+look.z);
+    printf("Gun point count : %d\n",red_dot_count);
+
+    for(int i=0;i<red_dot_count;i++) {
+        printf("(%lf %lf %lf )",gun_points[i].four_X,gun_points[i].three_Y,gun_points[i].three_Y);
+    }
+
+
 }
 
 // L = one    R = two   U = axis
@@ -506,13 +526,17 @@ void specialKeyListener(int key, int x,int y){
 void mouseListener(int button, int state, int x, int y){	//x, y is the x-y of the screen (2D)
 	switch(button){
 		case GLUT_LEFT_BUTTON:
-			if(state == GLUT_DOWN){		// 2 times?? in ONE click? -- solution is checking DOWN or UP
-				drawaxes=1-drawaxes;
-			}
+            printf("%lf",canon_rotation_Y_2);
+            gun_points[red_dot_count] = gun_point(canon_rotation_Z,canon_rotation_Y_1,canon_rotation_Y_2,canon_rotation_X);
+            red_dot_count++;
+
 			break;
 
 		case GLUT_RIGHT_BUTTON:
 			//........
+			if(state == GLUT_DOWN){		// 2 times?? in ONE click? -- solution is checking DOWN or UP
+				drawaxes=1-drawaxes;
+			}
 			break;
 
 		case GLUT_MIDDLE_BUTTON:
@@ -523,6 +547,55 @@ void mouseListener(int button, int state, int x, int y){	//x, y is the x-y of th
 			break;
 	}
 }
+
+
+
+void draw_front(point center) {
+
+    double radius = 25;
+
+    struct point points[100][100];
+	int i,j;
+	double h,r;
+	int stacks = 35;
+	int slices = 35;
+	//generate points
+	for(i=0;i<=stacks;i++)
+	{
+		h=radius*sin(((double)i/(double)stacks)*(pi/2));
+		r=radius*cos(((double)i/(double)stacks)*(pi/2));
+		for(j=0;j<=slices;j++)
+		{
+			points[i][j].y=r*cos(((double)j/(double)slices)*2*pi)+center.y;
+			points[i][j].z=r*sin(((double)j/(double)slices)*2*pi)+center.z;
+			points[i][j].x=h+center.x;
+		}
+	}
+
+	for(i=0;i<stacks;i++)
+	{
+
+		for(j=0;j<slices;j++)
+		{
+            if(j%2==0)
+                glColor3f(1,1,1);
+            else
+                glColor3f(0,0,0);
+
+			glBegin(GL_QUADS);{
+
+                glVertex3f(points[i][j].x,points[i][j].y,points[i][j].z);
+                glVertex3f(points[i][j+1].x,points[i][j+1].y,points[i][j+1].z);
+                glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,points[i+1][j+1].z);
+                glVertex3f(points[i+1][j].x,points[i+1][j].y,points[i+1][j].z);
+
+
+			}glEnd();
+		}
+	}
+}
+
+
 
 void draw_canon() {
 
@@ -547,6 +620,10 @@ void draw_canon() {
 
 }
 
+
+
+
+
 void draw_plane(double side, double dist) {
 
     glColor3f(.5,.5,.5);
@@ -562,16 +639,28 @@ void draw_plane(double side, double dist) {
 
 }
 
-void draw_red_dot(point c)
+void draw_red_dot(gun_point p)
 {
+
+    double distX = 454;
+
+
+
+    glRotatef(p.one_Z,0,0,1);
+    glRotatef(p.two_Y,0,1,0);
+    glTranslatef(50,0,0);
+    glRotatef(p.three_Y,0,1,0);
+    glRotatef(p.four_X,1,0,0);
+
+
     glColor3f(1,0,0);
 
     glBegin(GL_QUADS);{
 
-        glVertex3f(c.x,c.y+5,c.z+5);
-        glVertex3f(c.x,c.y-5,c.z+5);
-        glVertex3f(c.x,c.y-5,c.z-5);
-        glVertex3f(c.x,c.y+5,c.z-5);
+        glVertex3f(distX,5,5);
+        glVertex3f(distX,-5,5);
+        glVertex3f(distX,-5,-5);
+        glVertex3f(distX,5,-5);
 
     }glEnd();
 
@@ -581,7 +670,10 @@ void draw_red_dot(point c)
 void draw_red_dots() {
 
     for(int i=0;i<red_dot_count;i++) {
-        draw_red_dot(red_dots[i]);
+
+        glPushMatrix();
+        draw_red_dot(gun_points[i]);
+        glPopMatrix();
     }
 
 }
@@ -621,13 +713,10 @@ void display(){
 	drawAxes();
 
 	draw_plane(250,505);
+
     draw_red_dots();
 
 	draw_canon();
-
-
-
-
 
 
 	//ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
@@ -653,8 +742,8 @@ void init(){
 	canon_rotation_Y_2 = 0.0;
 	canon_rotation_Z = 0.0;
 
-	red_dot_count = 1;
-	red_dots[0] = point(500,1,1);
+	red_dot_count = 0;
+
 
 
 	//clear the screen
